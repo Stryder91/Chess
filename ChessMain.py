@@ -33,12 +33,32 @@ def main():
 
     running = True
 
+    sqSelected = () # le carré est cliqué - on le garde en mémoire ici
+    playerClicks = [] # les deux cliques : prendre et déplacer - two tuples: [(7,4), (4,4)]
     while running:
-
         # Pour chaque évènement pygame, si le type de l'évènement vaut p.QUIT
         for e in p.event.get():
             if e.type == p.QUIT:
                 running = False
+            elif e.type == p.MOUSEBUTTONDOWN:
+                location = p.mouse.get_pos() # (x, y) location of mouse
+                col = location[0] // SQ_SIZE
+                row = location[1] // SQ_SIZE
+                if sqSelected == (row, col): # si select deux fois le même carré
+                    sqSelected = () # on cancel
+                    playerClicks = [] # on cancel
+                else:
+                    sqSelected = (row, col) # On pose dans ce tuple là ou le joueur a cliqué
+                    playerClicks.append(sqSelected) # on append que ce soit le 1er ou 2e click
+                
+                if len(playerClicks) == 2: # donc là c'est le 2e move : on bouge le pion
+                    # On passe par une class
+                    move = ChessEngine.Move(playerClicks[0], playerClicks[1], gs.board)
+                    print(move.getChessNotation())
+                    gs.makeMove(move)
+                    sqSelected = () # reset user clicks
+                    playerClicks = []
+
         drawGameState(screen, gs)
         clock.tick(MAX_FPS)
         p.display.flip()
