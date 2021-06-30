@@ -5,7 +5,6 @@ Handling user input
 
 import pygame as p
 from ChessEngine import *
-import ChessEngine
 
 WIDTH = HEIGHT = 512 
 DIMENSION = 8
@@ -17,6 +16,8 @@ IMAGES = {}
 def loadImages():
     pieces = ["wp", "wR", "wN", "wB", "wK", "wQ", "bp", "bR", "bN", "bB", "bK", "bQ"]
 
+    # On crée juste un dict pour store les images 
+    # {"wp": "images/wp.png"}
     for piece in pieces:
         IMAGES[piece] = p.transform.scale(p.image.load("images/" + piece + ".png"), (SQ_SIZE, SQ_SIZE))
     
@@ -24,9 +25,14 @@ def main():
     p.init()
 
     screen = p.display.set_mode((WIDTH, HEIGHT))
+
+    # A quoi sert clock ?
     clock = p.time.Clock()
+
+    # Background
     screen.fill(p.Color("white"))
 
+    # On instancie dans gs tout l'état du jeu
     gs = ChessEngine.GameState()
 
     loadImages() #Only once, before while loop
@@ -35,6 +41,7 @@ def main():
 
     sqSelected = () # le carré est cliqué - on le garde en mémoire ici
     playerClicks = [] # les deux cliques : prendre et déplacer - two tuples: [(7,4), (4,4)]
+
     while running:
         # Pour chaque évènement pygame, si le type de l'évènement vaut p.QUIT
         for e in p.event.get():
@@ -44,6 +51,7 @@ def main():
                 location = p.mouse.get_pos() # (x, y) location of mouse
                 col = location[0] // SQ_SIZE
                 row = location[1] // SQ_SIZE
+                print("Col et row c'est " + col, row)
                 if sqSelected == (row, col): # si select deux fois le même carré
                     sqSelected = () # on cancel
                     playerClicks = [] # on cancel
