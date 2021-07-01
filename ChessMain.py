@@ -4,7 +4,7 @@ Handling user input
 """
 
 import pygame as p
-from ChessEngine import *
+import ChessEngine
 
 WIDTH = HEIGHT = 512 
 DIMENSION = 8
@@ -34,6 +34,8 @@ def main():
 
     # On instancie dans gs tout l'état du jeu
     gs = ChessEngine.GameState()
+    validMoves = gs.getValidMoves()
+    moveMade = False #flag variable pour quand un move est fait
 
     loadImages() #Only once, before while loop
 
@@ -42,16 +44,19 @@ def main():
     sqSelected = () # le carré est cliqué - on le garde en mémoire ici
     playerClicks = [] # les deux cliques : prendre et déplacer - two tuples: [(7,4), (4,4)]
 
+
     while running:
         # Pour chaque évènement pygame, si le type de l'évènement vaut p.QUIT
         for e in p.event.get():
             if e.type == p.QUIT:
                 running = False
+
             elif e.type == p.MOUSEBUTTONDOWN:
                 location = p.mouse.get_pos() # (x, y) location of mouse
+                # col c'est par exemple 485 // 64 = 7
                 col = location[0] // SQ_SIZE
                 row = location[1] // SQ_SIZE
-                print("Col et row c'est " + col, row)
+               
                 if sqSelected == (row, col): # si select deux fois le même carré
                     sqSelected = () # on cancel
                     playerClicks = [] # on cancel
@@ -59,20 +64,33 @@ def main():
                     sqSelected = (row, col) # On pose dans ce tuple là ou le joueur a cliqué
                     playerClicks.append(sqSelected) # on append que ce soit le 1er ou 2e click
                 
-                if len(playerClicks) == 2: # donc là c'est le 2e move : on bouge le pion
-                    # On passe par une class
+                if len(playerClicks) == 2: # donc là c'est le 2e move : on bouge le pion puis on reset playersClicks pour repasser la length à 0
+
                     move = ChessEngine.Move(playerClicks[0], playerClicks[1], gs.board)
                     print(move.getChessNotation())
-                    gs.makeMove(move)
+                    if move in validMoves:
+                        gs.makeMove(move)
+                        moveMade = True
+
                     sqSelected = () # reset user clicks
                     playerClicks = []
+            elif e.type == p.KEYDOWN:
+                if e.key == p.K_z: # quand on clique sur z
+                    gs.undoMove()
+                    moveMade = True
 
+        if moveMade:
+            validMoves = gs.getValidMoves()
+            moveMade = False
+        
         drawGameState(screen, gs)
         clock.tick(MAX_FPS)
+        # A quoi ça sert ?
         p.display.flip()
 
 
 def drawGameState(screen, gs):
+    # Le draw se fait en deux temps : pour le highlight notamment
     drawBoard(screen) # draw squares on board
     drawPieces(screen, gs.board) # draw pieces on top of squares
 
