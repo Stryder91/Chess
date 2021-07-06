@@ -11,8 +11,8 @@ class GameState():
 			["bR", "bN", "bB", "bQ", "bK", "bB", "bN", "bR"],
 			["bp", "bp", "bp", "bp", "bp", "bp", "bp", "bp"],
 			["--", "--", "--", "--", "--", "--", "--", "--"],
-			["--", "--", "--", "--", "--", "wB", "--", "--"],
-			["--", "--", "--", "wK", "--", "--", "--", "--"],
+			["--", "--", "--", "--", "--", "--", "--", "--"],
+			["--", "--", "--", "--", "--", "--", "--", "--"],
 			["--", "--", "--", "--", "--", "--", "--", "--"],
 			["wp", "wp", "wp", "wp", "wp", "wp", "wp", "wp"],
 			["wR", "wN", "wB", "wQ", "wK", "wB", "wN", "wR"]
@@ -28,12 +28,31 @@ class GameState():
 		}
 		self.whiteToMove = True
 		self.moveLog = []
+
+		self.whiteKingLocation = (7,4)
+		self.blackKingLocation = (0,4)
+
+		# Old version - simple algo
+		# self.checkMate = False
+		# self.staleMate = False
+
+		self.inCheck = False
+		# Les pins sont des pièces qui ne peuvent pas bouger car elles protègent le roi
+		self.pins = []
+		self.checks = []
 	
 	def makeMove(self, move):
-		self.board[move.startRow][move.startCol] = "--"
 		self.board[move.endRow][move.endCol] = move.pieceMoved
+		self.board[move.startRow][move.startCol] = "--"
 		self.moveLog.append(move) #log pour revenir en arrière ou afficher historique
 		self.whiteToMove = not self.whiteToMove # joué, donc on change de joueur
+
+		# on update l'enregistrement du king locations
+		if move.pieceMoved == "wK":
+			self.whiteKingLocation = (move.endRow, move.endCol)
+
+		elif move.pieceMoved == "bK":
+			self.blackKingLocation = (move.endRow, move.endCol)
 
 	def undoMove(self):
 		if len(self.moveLog) != 0:
@@ -41,12 +60,84 @@ class GameState():
 			self.board[move.startRow][move.startCol] = move.pieceMoved
 			self.board[move.endRow][move.endCol] = move.pieceCaptured
 			self.whiteToMove = not self.whiteToMove # On reswitch back le tour du joueur
-		
+			# on update king locations
+			if move.pieceMoved == "wK":
+				self.whiteKingLocation = (move.startRow, move.startCol)
+
+			elif move.pieceMoved == "bK":
+				self.blackKingLocation = (move.startRow, move.startCol)
+			
 	"""
 	All moves considering checks
 	"""
+	### Old version is in doc
 	def getValidMoves(self):
-		return self.getAllPossibleMoves()
+		moves = []
+		self.inCheck, self.pins, self.checks = self.checkForPinsAndChecks()
+		if self.whiteToMove:
+			kingRow = self.whiteKingLocation[0]
+			kingCol = self.whiteKingLocation[1]
+		else:
+			kingRow = self.blackKingLocation[0]
+			kingCol = self.blackKingLocation[1]
+		if self.inCheck:
+			if len(self.checks) == 1: #only 1 check, either block check or move king
+				moves = self.getAllPossibleMoves()
+				# to block a check you must move a piece into one of the square between enemy piece and king
+				check = self.checks[0]
+				checkRow = check[0]
+				checkCol = check[1]
+				pieceChecking = self.board[checkRow][checkCol]
+				validSquares = [] # squares that pieces can move to
+				# if knight, must capture knight or move king, other pieces can be blocked
+
+				if pieceChecking[1] == 'N':
+					validSquares = [(checkRow, checkCol)]
+				else:
+					pass
+
+	def checkForPinsAndChecks(self):
+		pins = [] # squares where the allied pinned piece is and direction pinned from
+		checks = []
+		inCheck = False
+
+		if self.whiteToMove:
+			enemyColor = "b"
+			allyColor = "w"
+			startRow = self.whiteKingLocation[0]
+			startCol = self.whiteKingLocation[1]
+		else:
+			enemyColor = "w"
+			allyColor = "b"
+			startRow = self.blackKingLocation[0]
+			startCol = self.blackKingLocation[1]
+		# check outward from king pins and checks, keep track of pins 
+		directions = ((-1,0), (0,-1), (1,0), (0,1), (-1,-1), (-1,1), (1, -1), (1,1))
+		for j in range(len(directions)):
+			d = directions[j]
+			possiblePin = () # reset possible pins
+			for i in range(1,8):
+				endRow = startRow + d[0] * i
+				endCol = startCol + d[1] * i
+			
+	"""
+	Determine si l'ennemi met en échec le roi 	
+	"""
+	def inCheck(self):
+		if self.whiteToMove:
+			return self.squareUnderAttack(self.whiteKingLocation[0], self.whiteKingLocation[1])
+		else:
+			return self.squareUnderAttack(self.blackKingLocation[0], self.blackKingLocation[1])	
+	
+	def squareUnderAttack(self, r, c):
+		self.whiteToMove = not self.whiteToMove
+		oppMoves = self.getAllPossibleMoves()
+
+		self.whiteToMove = not self.whiteToMove 
+		for move in oppMoves:
+			if move.endRow == r and move.endCol == c:
+				return True
+		return False
 
 	"""
 	Ici, on considère qu'on pion peut bouger même si il met en échec son propre roi.
